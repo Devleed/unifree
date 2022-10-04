@@ -1,0 +1,15 @@
+POST http://localhost:3000/liquidity/add
+Content-Type: application/json
+
+{
+  "user": "0x09050568Ed00123dA7d9250c8A57AD393EeD8307",
+  "amount0": 2490000000,
+  "amount1": 2000000000000000000,
+  "poolAddress": "0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8",
+  "vaultAddress": "0x1ae1df64bf695ea1f1a7ebdc280af712340f09a9",
+  "liquidityBlock": 15667197
+}
+
+###
+
+GET http://localhost:3000/liquidity
