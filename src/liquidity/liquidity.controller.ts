@@ -1,15 +1,10 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import { UserLiquidity } from './liquidity.model';
+import { UserLiquidity, CalculateEarning } from './liquidity.model';
 import { UserLiquidityService } from './liquidity.service';
 
 @Controller('liquidity')
 export class UserLiquidityController {
   constructor(private readonly liquidityService: UserLiquidityService) {}
-
-  @Get('/test')
-  test() {
-    return 'good';
-  }
 
   @Get('/')
   getUsersLiquidity() {
@@ -19,5 +14,10 @@ export class UserLiquidityController {
   @Post('/add')
   addLiquidity(@Body() body: UserLiquidity) {
     return this.liquidityService.addLiquidity(body);
+  }
+
+  @Post('/calculateEarnings')
+  calculateEarnings(@Body() body: CalculateEarning) {
+    return this.liquidityService.calculateEarning(body);
   }
 }

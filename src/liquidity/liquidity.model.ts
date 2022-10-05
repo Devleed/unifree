@@ -17,3 +17,9 @@ export interface UserLiquidity {
   vaultAddress: string;
   liquidityBlock: number;
 }
+
+export interface CalculateEarning {
+  userAddress: string;
+  poolAddress: string;
+  vaultAddress: string;
+}
