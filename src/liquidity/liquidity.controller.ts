@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Param } from '@nestjs/common';
 import { UserLiquidity, CalculateEarning } from './liquidity.model';
 import { UserLiquidityService } from './liquidity.service';
 
@@ -6,9 +6,9 @@ import { UserLiquidityService } from './liquidity.service';
 export class UserLiquidityController {
   constructor(private readonly liquidityService: UserLiquidityService) {}
 
-  @Get('/')
-  getUsersLiquidity() {
-    return this.liquidityService.getUsersLiquidity();
+  @Get('/getUserLiquidity/:userAddress')
+  async getUserLiquidity(@Param('userAddress') userAddress: string) {
+    return this.liquidityService.getUserLiquidity(userAddress);
   }
 
   @Post('/add')

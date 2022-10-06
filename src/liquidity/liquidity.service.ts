@@ -709,13 +709,9 @@ export class UserLiquidityService {
     @InjectModel('liquidity') private liquidityModel: Model<UserLiquidity>,
   ) {}
 
-  async getUsersLiquidity() {
-    try {
-      const data = await this.liquidityModel.find({});
-      return data;
-    } catch (error) {
-      throwError(error, 'getUsersLiquidity');
-    }
+  async getUserLiquidity(userAddress: string) {
+    console.log(userAddress);
+    return this.liquidityModel.find({ user: userAddress });
   }
 
   async addLiquidity(body: UserLiquidity) {
