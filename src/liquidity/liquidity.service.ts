@@ -720,9 +720,43 @@ export class UserLiquidityService {
 
   async addLiquidity(body: UserLiquidity) {
     try {
-      console.log('body ==>>', body);
+      const userLiquidity = await this.liquidityModel.findOne({
+        user: body.user,
+        vaultAddress: body.vaultAddress,
+        poolAddress: body.poolAddress,
+      });
+
+      // adding liquidity in new pool
       const currentBlock = await web3.eth.getBlockNumber();
+
+      if (userLiquidity) {
+        // adding liquidity in same pool
+
+        // calculate the fees earning till yet
+        const fees = await this.calculateEarning({
+          userAddress: userLiquidity.user,
+          poolAddress: userLiquidity.poolAddress,
+          vaultAddress: userLiquidity.vaultAddress,
+        });
+
+        // add the earned fees and added liquidity in user's current liquidity
+        userLiquidity.amount0 += fees.fees0 + body.amount0;
+        userLiquidity.amount1 += fees.fees1 + body.amount1;
+
+        // update the block
+        userLiquidity.liquidityBlock = currentBlock;
+
+        userLiquidity.lpTokens = Math.sqrt(
+          userLiquidity.amount0 * userLiquidity.amount1,
+        );
+
+        // save updated liquidity
+        return await userLiquidity.save();
+      }
+
       body.liquidityBlock = currentBlock;
+      body.lpTokens = Math.sqrt(body.amount0 * body.amount1);
+
       const newData = await new this.liquidityModel(body).save();
       return newData;
     } catch (error) {
@@ -742,19 +776,15 @@ export class UserLiquidityService {
     let blockRanges = [];
     blockRanges.push(User.liquidityBlock);
 
-    //fetching add liquidty events
-    const mintEvents = await Contract.getPastEvents('Mint', {
-      fromBlock: User.liquidityBlock,
-      toBlock: 'latest',
-    });
-    //fetching remove liquity events
-    const burnEvents = await Contract.getPastEvents('Burn', {
-      fromBlock: User.liquidityBlock,
-      toBlock: 'latest',
-    });
+    //fetching add and remove liquidty events
+    const [mintEvents, burnEvents] = await Promise.all([
+      this.getEvents('Mint', Contract, User.liquidityBlock),
+      this.getEvents('Burn', Contract, User.liquidityBlock),
+    ]);
 
-    mintEvents.forEach(({ blockNumber }) => blockRanges.push(blockNumber));
-    burnEvents.forEach(({ blockNumber }) => blockRanges.push(blockNumber));
+    [...mintEvents, ...burnEvents].forEach(({ blockNumber }) =>
+      blockRanges.push(blockNumber),
+    );
 
     blockRanges = [...new Set([...blockRanges])];
 
@@ -858,9 +888,21 @@ export class UserLiquidityService {
       }
     }
 
+    User.feeEarning.amount0 = userEarnedFeesA;
+    User.feeEarning.amount1 = userEarnedFeesB;
+
+    await User.save();
+
     return {
       fees0: userEarnedFeesA,
       fees1: userEarnedFeesB,
     };
+  }
+
+  getEvents(eventName: string, contractInstance: any, liquidityBlock: number) {
+    return contractInstance.getPastEvents(eventName, {
+      fromBlock: liquidityBlock,
+      toBlock: 'latest',
+    });
   }
 }
