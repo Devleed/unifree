@@ -715,46 +715,78 @@ export class UserLiquidityService {
   }
 
   async addLiquidity(body: UserLiquidity) {
+    const vaultQuery = `{
+          vault(id:"${body.vaultAddress.toLowerCase()}") {
+            baseTickLower
+            baseTickUpper
+          }
+        }`;
+
     try {
-      const userLiquidity = await this.liquidityModel.findOne({
-        user: body.user,
-        vaultAddress: body.vaultAddress,
-        poolAddress: body.poolAddress,
+      const { data } = await axios.post(
+        'https://api.thegraph.com/subgraphs/name/unipilotvoirstudio/unipilot-v2-stats',
+        {
+          query: vaultQuery,
+        },
+      );
+
+      const tickQuery = `
+        {
+          ticks(where:{poolAddress:"${body.poolAddress.toLowerCase()}", tickIdx_gt:${
+        data.vault.baseTickLower
+      }, tickIdx_lt:${data.vault.baseTickUpper}) {
+            tickIdx
+            feeGrowthOutside0X128
+            feeGrowthOutside1X128
+          }
+        }
+    `;
+
+      const { data: ticksData } = await axios.post('', {
+        query: tickQuery,
       });
 
-      // adding liquidity in new pool
-      const currentBlock = await web3.eth.getBlockNumber();
+      console.log('ticks -', ticksData);
 
-      if (userLiquidity) {
-        // adding liquidity in same pool
+      // const userLiquidity = await this.liquidityModel.findOne({
+      //   user: body.user,
+      //   vaultAddress: body.vaultAddress,
+      //   poolAddress: body.poolAddress,
+      // });
 
-        // calculate the fees earning till yet
-        const fees = await this.calculateEarning({
-          userAddress: userLiquidity.user,
-          poolAddress: userLiquidity.poolAddress,
-          vaultAddress: userLiquidity.vaultAddress,
-        });
+      // // adding liquidity in new pool
+      // const currentBlock = await web3.eth.getBlockNumber();
 
-        // add the earned fees and added liquidity in user's current liquidity
-        userLiquidity.amount0 += fees.fees0 + body.amount0;
-        userLiquidity.amount1 += fees.fees1 + body.amount1;
+      // if (userLiquidity) {
+      //   // adding liquidity in same pool
 
-        // update the block
-        userLiquidity.liquidityBlock = currentBlock;
+      //   // calculate the fees earning till yet
+      //   const fees = await this.calculateEarning({
+      //     userAddress: userLiquidity.user,
+      //     poolAddress: userLiquidity.poolAddress,
+      //     vaultAddress: userLiquidity.vaultAddress,
+      //   });
 
-        userLiquidity.lpTokens = Math.sqrt(
-          userLiquidity.amount0 * userLiquidity.amount1,
-        );
+      //   // add the earned fees and added liquidity in user's current liquidity
+      //   userLiquidity.amount0 += fees.fees0 + body.amount0;
+      //   userLiquidity.amount1 += fees.fees1 + body.amount1;
 
-        // save updated liquidity
-        return await userLiquidity.save();
-      }
+      //   // update the block
+      //   userLiquidity.liquidityBlock = currentBlock;
 
-      body.liquidityBlock = currentBlock;
-      body.lpTokens = Math.sqrt(body.amount0 * body.amount1);
+      //   userLiquidity.lpTokens = Math.sqrt(
+      //     userLiquidity.amount0 * userLiquidity.amount1,
+      //   );
 
-      const newData = await new this.liquidityModel(body).save();
-      return newData;
+      //   // save updated liquidity
+      //   return await userLiquidity.save();
+      // }
+
+      // body.liquidityBlock = currentBlock;
+      // body.lpTokens = Math.sqrt(body.amount0 * body.amount1);
+
+      // const newData = await new this.liquidityModel(body).save();
+      // return newData;
     } catch (error) {
       throwError(error, 'addLiquidity');
     }
