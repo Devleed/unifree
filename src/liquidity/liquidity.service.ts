@@ -3,6 +3,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { throwError } from 'src/utils';
 import { UserLiquidity } from './liquidity.model';
+import {
+  getSqrtPriceX96,
+  getLiquidityForAmounts,
+} from '../utils/liquidityMath';
 import axios from 'axios';
 import bn from 'bignumber.js';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -1395,92 +1399,54 @@ export class UserLiquidityService {
   }
 
   async addLiquidity(body: UserLiquidity) {
-    const vaultQuery = `{
-          vault(id:"${body.vaultAddress.toLowerCase()}") {
-            baseTickLower
-            baseTickUpper
-          }
-        }`;
+    const POOL_ADDRESS = '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8';
+    const VAULT_ADDRESS = '0x1ae1df64bf695ea1f1a7ebdc280af712340f09a9';
 
-    try {
-      const {
-        data: { data },
-      } = await axios.post(
-        'https://api.thegraph.com/subgraphs/name/unipilotvoirstudio/unipilot-v2-stats',
-        {
-          query: vaultQuery,
-        },
-      );
+    const poolContract = new web3.eth.Contract(poolABI, POOL_ADDRESS);
+    const vaultContract = new web3.eth.Contract(vaultABI, VAULT_ADDRESS);
 
-      console.log('vault -', data);
+    const { tick } = await poolContract.methods.slot0().call();
+    const { baseTickLower, baseTickUpper } = await vaultContract.methods
+      .ticksData()
+      .call();
 
-      const tickQuery = `
-        {
-          ticks(where:{poolAddress:"${body.poolAddress.toLowerCase()}", tickIdx_gt:${
-        data.vault.baseTickLower
-      }, tickIdx_lt:${data.vault.baseTickUpper}, liquidityNet_gt:0}) {
-            tickIdx
-            feeGrowthOutside0X128
-            feeGrowthOutside1X128
-          }
-        }
-    `;
+    const token0 = await poolContract.methods.token0().call();
+    const token1 = await poolContract.methods.token1().call();
 
-      const {
-        data: {
-          data: { ticks },
-        },
-      } = await axios.post(
-        'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3',
-        {
-          query: tickQuery,
-        },
-      );
+    // get tokens data
+    const token0Data = new web3.eth.Contract(erc20ABI, token0);
+    const token1Data = new web3.eth.Contract(erc20ABI, token1);
 
-      console.log('ticks -', ticks);
+    // get tokens decimals
+    const [token0Decimals, token1Decimals]: [string, string] =
+      await Promise.all([
+        token0Data.methods.decimals().call(),
+        token1Data.methods.decimals().call(),
+      ]);
 
-      // const userLiquidity = await this.liquidityModel.findOne({
-      //   user: body.user,
-      //   vaultAddress: body.vaultAddress,
-      //   poolAddress: body.poolAddress,
-      // });
+    const sqrtPriceX96 = getSqrtPriceX96(tick, token0Decimals, token1Decimals);
+    const sqrtPriceAX96 = getSqrtPriceX96(
+      baseTickLower,
+      token0Decimals,
+      token1Decimals,
+    );
+    const sqrtPriceBX96 = getSqrtPriceX96(
+      baseTickUpper,
+      token0Decimals,
+      token1Decimals,
+    );
 
-      // // adding liquidity in new pool
-      // const currentBlock = await web3.eth.getBlockNumber();
+    const liquidity = getLiquidityForAmounts(
+      sqrtPriceX96,
+      sqrtPriceAX96,
+      sqrtPriceBX96,
+      body.amount0Real,
+      Number(token1Decimals),
+      body.amount1Real,
+      Number(token0Decimals),
+    );
 
-      // if (userLiquidity) {
-      //   // adding liquidity in same pool
-
-      //   // calculate the fees earning till yet
-      //   const fees = await this.calculateEarning({
-      //     userAddress: userLiquidity.user,
-      //     poolAddress: userLiquidity.poolAddress,
-      //     vaultAddress: userLiquidity.vaultAddress,
-      //   });
-
-      //   // add the earned fees and added liquidity in user's current liquidity
-      //   userLiquidity.amount0 += fees.fees0 + body.amount0;
-      //   userLiquidity.amount1 += fees.fees1 + body.amount1;
-
-      //   // update the block
-      //   userLiquidity.liquidityBlock = currentBlock;
-
-      //   userLiquidity.lpTokens = Math.sqrt(
-      //     userLiquidity.amount0 * userLiquidity.amount1,
-      //   );
-
-      //   // save updated liquidity
-      //   return await userLiquidity.save();
-      // }
-
-      // body.liquidityBlock = currentBlock;
-      // body.lpTokens = Math.sqrt(body.amount0 * body.amount1);
-
-      // const newData = await new this.liquidityModel(body).save();
-      // return newData;
-    } catch (error) {
-      throwError(error, 'addLiquidity');
-    }
+    console.log(liquidity);
   }
 
   async calculateEarning({ userAddress, poolAddress, vaultAddress }) {

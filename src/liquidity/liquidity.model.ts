@@ -18,6 +18,8 @@ export interface UserLiquidity {
   user: string;
   amount0: number;
   amount1: number;
+  amount0Real: number;
+  amount1Real: number;
   poolAddress: string;
   vaultAddress: string;
   liquidityBlock: number;
