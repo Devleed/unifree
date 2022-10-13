@@ -1,4 +1,4 @@
-POST http://localhost:3000/liquidity/add
+POST http://localhost:3001/liquidity/add
 Content-Type: application/json
 
 {
@@ -12,4 +12,4 @@ Content-Type: application/json
 
 ###
 
-GET http://localhost:3000/liquidity
+GET http://localhost:3001/liquidity/fees

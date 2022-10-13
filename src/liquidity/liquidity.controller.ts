@@ -20,4 +20,9 @@ export class UserLiquidityController {
   calculateEarnings(@Body() body: CalculateEarning) {
     return this.liquidityService.calculateEarning(body);
   }
+
+  @Get('/fees')
+  feeMath() {
+    return this.liquidityService.feesMath();
+  }
 }
