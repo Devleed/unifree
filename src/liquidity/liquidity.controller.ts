@@ -11,7 +11,7 @@ export class UserLiquidityController {
     return this.liquidityService.getUserLiquidity(userAddress);
   }
 
-  @Post('/add')
+  @Get('/add')
   addLiquidity(@Body() body: UserLiquidity) {
     return this.liquidityService.addLiquidity(body);
   }
@@ -19,10 +19,5 @@ export class UserLiquidityController {
   @Post('/calculateEarnings')
   calculateEarnings(@Body() body: CalculateEarning) {
     return this.liquidityService.calculateEarning(body);
-  }
-
-  @Get('/fees')
-  feeMath() {
-    return this.liquidityService.feesMath();
   }
 }

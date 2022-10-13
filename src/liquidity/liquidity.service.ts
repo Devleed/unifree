@@ -1398,12 +1398,17 @@ export class UserLiquidityService {
     return this.liquidityModel.find({ user: userAddress });
   }
 
-  async addLiquidity(body: UserLiquidity) {
-    const POOL_ADDRESS = '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8';
-    const VAULT_ADDRESS = '0x1ae1df64bf695ea1f1a7ebdc280af712340f09a9';
+  async addLiquidity(Reqbody: UserLiquidity) {
+    const body = {
+      user: '0x2c73d3d4454DB9C0Dd4d81804212982b838E100A',
+      poolAddress: '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8',
+      vaultAddress: '0x1ae1df64bf695ea1f1a7ebdc280af712340f09a9',
+      amount0: 1000,
+      amount1: 1,
+    };
 
-    const poolContract = new web3.eth.Contract(poolABI, POOL_ADDRESS);
-    const vaultContract = new web3.eth.Contract(vaultABI, VAULT_ADDRESS);
+    const poolContract = new web3.eth.Contract(poolABI, body.poolAddress);
+    const vaultContract = new web3.eth.Contract(vaultABI, body.vaultAddress);
 
     const { tick } = await poolContract.methods.slot0().call();
     const { baseTickLower, baseTickUpper } = await vaultContract.methods
@@ -1440,156 +1445,53 @@ export class UserLiquidityService {
       sqrtPriceX96,
       sqrtPriceAX96,
       sqrtPriceBX96,
-      body.amount0Real,
+      body.amount0,
       Number(token1Decimals),
-      body.amount1Real,
+      body.amount1,
       Number(token0Decimals),
     );
 
-    console.log(liquidity);
+    const { feesBetweenTicks0, feesBetweenTicks1 } =
+      await this.calculateFeesPerUnitLiquidity(
+        body.poolAddress,
+        body.vaultAddress,
+      );
+
+    body['liquidity'] = Number(liquidity.toString());
+    body['liquidityBlock'] = await web3.eth.getBlockNumber();
+    body['feesPerUnitLiquidity'] = {
+      fees0: feesBetweenTicks0,
+      fees1: feesBetweenTicks1,
+    };
+
+    const userLiquidity = new this.liquidityModel(body);
+    await userLiquidity.save();
   }
 
   async calculateEarning({ userAddress, poolAddress, vaultAddress }) {
     const User = await this.liquidityModel.findOne({
-      user: userAddress,
+      User: userAddress,
       poolAddress,
       vaultAddress,
     });
 
-    const Contract = new web3.eth.Contract(poolABI, User.poolAddress);
-
-    let blockRanges = [];
-    blockRanges.push(User.liquidityBlock);
-
-    //fetching add and remove liquidty events
-    const [mintEvents, burnEvents] = await Promise.all([
-      this.getEvents('Mint', Contract, User.liquidityBlock),
-      this.getEvents('Burn', Contract, User.liquidityBlock),
-    ]);
-
-    [...mintEvents, ...burnEvents].forEach(({ blockNumber }) =>
-      blockRanges.push(blockNumber),
+    const feesPerUnitLiquidity = this.calculateFeesPerUnitLiquidity(
+      poolAddress,
+      vaultAddress,
     );
 
-    blockRanges = [...new Set([...blockRanges])];
-
-    blockRanges.sort();
-    //[1,4,9,15]
-
-    const poolDataPromises = [];
-    const vaultDataPromises = [];
-
-    blockRanges.forEach((block) => {
-      poolDataPromises.push(
-        axios.post(
-          'https://api.thegraph.com/subgraphs/name/devleed/uniswappools',
-          {
-            query: `
-      {
-        pools(block:{number: ${block}}, where:{id : "${User.poolAddress}"}) {
-          id
-          reserves0
-          reserves1
-          feeTier
-          collectedFees0
-          collectedFees1
-        }
-      }
-      `,
-          },
-        ),
-      );
-
-      vaultDataPromises.push(
-        axios.post(
-          'https://api.thegraph.com/subgraphs/name/unipilotvoirstudio/unipilot-v2-stats',
-          {
-            query: `
-        {
-          vaults(block:{number: ${block}} where:{id:"${User.vaultAddress}"}) {
-            fee0invested
-            fee1invested
-            fee0Uninvested
-            fee1Uninvested
-            rangeLiquidity
-            baseLiquidity
-            totalLiquidity
-            totalLockedToken0
-            totalLockedToken1
-          }
-        }
-        `,
-          },
-        ),
-      );
-    });
-
-    const poolDataResolve: any = await Promise.all(poolDataPromises);
-    const vaultDataResolve: any = await Promise.all(vaultDataPromises);
-
-    let userEarnedFeesA = 0;
-    let userEarnedFeesB = 0;
-
-    for (let i = 0; i < poolDataResolve.length; i++) {
-      if (i !== poolDataResolve.length - 1) {
-        // current pool and vault data
-        const poolData = poolDataResolve[i].data.data.pools[0];
-        const vaultData = vaultDataResolve[i].data.data.vaults[0];
-
-        // next pools data
-        const poolDataForward = poolDataResolve[i + 1].data.data.pools[0];
-
-        // user, pool and vault liauidity in ETH
-        const poolLiquidity = poolData.reserves0 * poolData.reserves1;
-        const vaultLiquidity =
-          vaultData.totalLockedToken0 * vaultData.totalLockedToken1;
-        const userLiquidity = User.amount0 * User.amount1;
-
-        // pool's fees earning between current block ranges
-        const poolFeesEarnedA =
-          poolDataForward.collectedFees0 - poolData.collectedFees0;
-        const poolFeesEarnedB =
-          poolDataForward.collectedFees1 - poolData.collectedFees1;
-
-        // vault's share in pool
-        // calculated by formula: (vault Liduidity + user's fake liquidity) / (pool liquidity + user's fake liquidity)
-        const vaultShareInPool =
-          (vaultLiquidity + userLiquidity) / (poolLiquidity + userLiquidity);
-
-        // user's share in vault
-        // calculated by formula: user's liquidity / (vault's liquidity + user's liquidity)
-        const userShareInVault =
-          userLiquidity / (vaultLiquidity + userLiquidity);
-
-        // vault earned fees
-        const vaultEarnedFeesA = poolFeesEarnedA * vaultShareInPool;
-        const vaultEarnedFeesB = poolFeesEarnedB * vaultShareInPool;
-
-        console.log(vaultEarnedFeesA, vaultEarnedFeesB);
-
-        // user earned fees
-        userEarnedFeesA += vaultEarnedFeesA * userShareInVault;
-        userEarnedFeesB += vaultEarnedFeesB * userShareInVault;
-      }
-    }
-
-    User.feeEarning.amount0 = userEarnedFeesA;
-    User.feeEarning.amount1 = userEarnedFeesB;
-
-    await User.save();
-
     return {
-      fees0: userEarnedFeesA,
-      fees1: userEarnedFeesB,
+      fees0: 0,
+      fees1: 0,
     };
   }
 
-  async feesMath() {
-    const POOL_ADDRESS = '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8';
-    const VAULT_ADDRESS = '0x1ae1df64bf695ea1f1a7ebdc280af712340f09a9';
-
-    const poolContract = new web3.eth.Contract(poolABI, POOL_ADDRESS);
-    const vaultContract = new web3.eth.Contract(vaultABI, VAULT_ADDRESS);
+  async calculateFeesPerUnitLiquidity(
+    poolAddress: string,
+    vaultAddress: string,
+  ) {
+    const poolContract = new web3.eth.Contract(poolABI, poolAddress);
+    const vaultContract = new web3.eth.Contract(vaultABI, vaultAddress);
 
     // get calculation data
     const [
@@ -1631,7 +1533,7 @@ export class UserLiquidityService {
       const newLowerTickIdx = await this.returnValidatedTick(
         baseTickLower,
         'lower',
-        POOL_ADDRESS,
+        poolAddress,
       );
 
       // fetch tick data for validated tick id
@@ -1642,7 +1544,7 @@ export class UserLiquidityService {
       const newUpperTickIdx = await this.returnValidatedTick(
         baseTickUpper,
         'upper',
-        POOL_ADDRESS,
+        poolAddress,
       );
 
       upperTick = await poolContract.methods.ticks(newUpperTickIdx).call();
@@ -1723,6 +1625,11 @@ export class UserLiquidityService {
       token0,
       token1,
     });
+
+    return {
+      feesBetweenTicks0,
+      feesBetweenTicks1,
+    };
   }
 
   calculateFeesAbove(

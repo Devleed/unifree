@@ -12,6 +12,11 @@ export const LiquiditySchema = new mongoose.Schema({
     amount0: { type: Number, default: 0 },
     amount1: { type: Number, default: 0 },
   },
+  feesPerUnitLiquidity: {
+    fees0: { type: Number, default: 0 },
+    fees1: { type: Number, default: 0 },
+  },
+  liquidity: Number,
 });
 
 export interface UserLiquidity {
@@ -24,7 +29,7 @@ export interface UserLiquidity {
   vaultAddress: string;
   liquidityBlock: number;
   feeEarning: FeeEarning;
-  lpTokens: number;
+  liquidity: number;
 }
 
 type FeeEarning = {
