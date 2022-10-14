@@ -12,4 +12,4 @@ Content-Type: application/json
 
 ###
 
-GET http://localhost:3001/liquidity/fees
+GET http://localhost:3001/liquidity/verify
