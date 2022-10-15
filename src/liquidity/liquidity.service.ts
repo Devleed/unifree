@@ -1397,7 +1397,7 @@ export class UserLiquidityService {
     return this.liquidityModel.find({ user: userAddress });
   }
 
-  async addLiquidity(Reqbody: UserLiquidity) {
+  async addLiquidity(reqBody: UserLiquidity) {
     const body = {
       user: '0x2c73d3d4454DB9C0Dd4d81804212982b838E100A',
       poolAddress: '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8',
@@ -1406,16 +1406,22 @@ export class UserLiquidityService {
       amount1: 1,
     };
 
-    const poolContract = new web3.eth.Contract(poolABI, body.poolAddress);
-    const vaultContract = new web3.eth.Contract(vaultABI, body.vaultAddress);
+    const poolContract = new web3.eth.Contract(poolABI, reqBody.poolAddress);
+    const vaultContract = new web3.eth.Contract(vaultABI, reqBody.vaultAddress);
 
-    const { tick } = await poolContract.methods.slot0().call();
-    const { baseTickLower, baseTickUpper } = await vaultContract.methods
-      .ticksData()
-      .call();
-
-    const token0 = await poolContract.methods.token0().call();
-    const token1 = await poolContract.methods.token1().call();
+    const [
+      { tick },
+      { baseTickLower, baseTickUpper },
+      token0,
+      token1,
+      blockNumber,
+    ] = await Promise.all([
+      poolContract.methods.slot0().call(),
+      vaultContract.methods.ticksData().call(),
+      poolContract.methods.token0().call(),
+      poolContract.methods.token1().call(),
+      web3.eth.getBlockNumber(),
+    ]);
 
     // get tokens data
     const token0Data = new web3.eth.Contract(erc20ABI, token0);
@@ -1444,27 +1450,27 @@ export class UserLiquidityService {
       sqrtPriceX96,
       sqrtPriceAX96,
       sqrtPriceBX96,
-      body.amount0,
+      reqBody.amount0,
       Number(token1Decimals),
-      body.amount1,
+      reqBody.amount1,
       Number(token0Decimals),
     );
 
     const { feesBetweenTicks0, feesBetweenTicks1 } =
       await this.calculateFeesPerUnitLiquidity(
-        body.poolAddress,
-        body.vaultAddress,
+        reqBody.poolAddress,
+        reqBody.vaultAddress,
       );
 
-    body['liquidity'] = Number(liquidity.toString());
-    body['liquidityBlock'] = await web3.eth.getBlockNumber();
-    body['feesPerUnitLiquidity'] = {
+    reqBody['liquidity'] = Number(liquidity.toString());
+    reqBody['liquidityBlock'] = blockNumber;
+    reqBody['feesPerUnitLiquidity'] = {
       fees0: feesBetweenTicks0,
       fees1: feesBetweenTicks1,
     };
 
-    const userLiquidity = new this.liquidityModel(body);
-    await userLiquidity.save();
+    const userLiquidity = new this.liquidityModel(reqBody);
+    return await userLiquidity.save();
   }
 
   async calculateEarning({ userAddress, poolAddress, vaultAddress }) {
@@ -1587,7 +1593,7 @@ export class UserLiquidityService {
           baseTickLower,
           feesGrowthOutsideLower0,
           token0GlobalFees,
-        ).minus(
+        ).plus(
           this.calculateFeesAbove(
             tick,
             baseTickUpper,
@@ -1605,7 +1611,7 @@ export class UserLiquidityService {
           baseTickLower,
           feesGrowthOutsideLower1,
           token1GlobalFees,
-        ).minus(
+        ).plus(
           this.calculateFeesAbove(
             tick,
             baseTickUpper,

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Param } from '@nestjs/common';
+import { Body, Controller, Get, Post, Param, Query } from '@nestjs/common';
 import { UserLiquidity, CalculateEarning } from './liquidity.model';
 import { UserLiquidityService } from './liquidity.service';
 
@@ -11,14 +11,14 @@ export class UserLiquidityController {
     return this.liquidityService.getUserLiquidity(userAddress);
   }
 
-  @Get('/add')
+  @Post('/add')
   addLiquidity(@Body() body: UserLiquidity) {
     return this.liquidityService.addLiquidity(body);
   }
 
   @Get('/calculateEarnings')
-  calculateEarnings(@Body() body: CalculateEarning) {
-    return this.liquidityService.calculateEarning(body);
+  calculateEarnings(@Query() query: CalculateEarning) {
+    return this.liquidityService.calculateEarning(query);
   }
 
   @Get('/validate')
