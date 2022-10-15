@@ -1462,6 +1462,36 @@ export class UserLiquidityService {
         reqBody.vaultAddress,
       );
 
+    const userLiquidityExists = await this.liquidityModel.findOne({
+      user: reqBody.user,
+      poolAddress: reqBody.poolAddress,
+      vaultAddress: reqBody.vaultAddress,
+    });
+
+    if (userLiquidityExists) {
+      const feesEarnedTillNow: [number, number] = [
+        userLiquidityExists.liquidity *
+          (feesBetweenTicks0 - userLiquidityExists.feesPerUnitLiquidity.fees0),
+        userLiquidityExists.liquidity *
+          (feesBetweenTicks1 - userLiquidityExists.feesPerUnitLiquidity.fees1),
+      ];
+
+      userLiquidityExists.liquidity += liquidity.toNumber();
+
+      userLiquidityExists.feesPerUnitLiquidity.fees0 = feesBetweenTicks0;
+      userLiquidityExists.feesPerUnitLiquidity.fees1 = feesBetweenTicks1;
+
+      userLiquidityExists.amount0 += reqBody.amount0;
+      userLiquidityExists.amount1 += reqBody.amount1;
+
+      userLiquidityExists.feeEarning.amount0 += feesEarnedTillNow[0];
+      userLiquidityExists.feeEarning.amount1 += feesEarnedTillNow[1];
+
+      userLiquidityExists.liquidityBlock = blockNumber;
+
+      return await userLiquidityExists.save();
+    }
+
     reqBody['liquidity'] = Number(liquidity.toString());
     reqBody['liquidityBlock'] = blockNumber;
     reqBody['feesPerUnitLiquidity'] = {
@@ -1474,9 +1504,10 @@ export class UserLiquidityService {
   }
 
   async calculateEarning({ userAddress, poolAddress, vaultAddress }) {
-    userAddress = '0x2c73d3d4454DB9C0Dd4d81804212982b838E100A';
     const User = await this.liquidityModel.findOne({
       User: userAddress,
+      poolAddress,
+      vaultAddress,
     });
 
     const { fees0, fees1 } = User.feesPerUnitLiquidity;
