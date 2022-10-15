@@ -1469,12 +1469,20 @@ export class UserLiquidityService {
     });
 
     if (userLiquidityExists) {
+      console.log('fees pr unit liq -', feesBetweenTicks0);
+      console.log(
+        'fees pr unit liq old -',
+        userLiquidityExists.feesPerUnitLiquidity.fees0,
+      );
+
       const feesEarnedTillNow: [number, number] = [
         userLiquidityExists.liquidity *
           (feesBetweenTicks0 - userLiquidityExists.feesPerUnitLiquidity.fees0),
         userLiquidityExists.liquidity *
           (feesBetweenTicks1 - userLiquidityExists.feesPerUnitLiquidity.fees1),
       ];
+
+      console.log('fees eearnned -', feesEarnedTillNow);
 
       userLiquidityExists.liquidity += liquidity.toNumber();
 
