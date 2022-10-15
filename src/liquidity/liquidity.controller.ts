@@ -16,8 +16,21 @@ export class UserLiquidityController {
     return this.liquidityService.addLiquidity(body);
   }
 
-  @Post('/calculateEarnings')
+  @Get('/calculateEarnings')
   calculateEarnings(@Body() body: CalculateEarning) {
     return this.liquidityService.calculateEarning(body);
   }
+
+  @Get('/validate')
+  validateFeesPast() {
+    return {
+      past: this.liquidityService.validateFeePerUnitLiquidatePast(),
+      present: this.liquidityService.validateFeePerUnitLiquidatePresent(),
+    };
+  }
+
+  // @Get('/validatePresent')
+  // validateFeesPresent() {
+  //   return this.liquidityService.validateFeePerUnitLiquidatePresent();
+  // }
 }

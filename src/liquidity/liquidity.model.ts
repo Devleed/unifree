@@ -7,6 +7,7 @@ export const LiquiditySchema = new mongoose.Schema({
   poolAddress: String,
   vaultAddress: String,
   liquidityBlock: Number,
+  earningBlock: Number,
   lpTokens: Number,
   feeEarning: {
     amount0: { type: Number, default: 0 },
@@ -28,13 +29,20 @@ export interface UserLiquidity {
   poolAddress: string;
   vaultAddress: string;
   liquidityBlock: number;
+  earningBlock: number;
   feeEarning: FeeEarning;
+  feesPerUnitLiquidity: FeePerEarningLiquidity;
   liquidity: number;
 }
 
 type FeeEarning = {
   amount0: number;
   amount1: number;
+};
+
+type FeePerEarningLiquidity = {
+  fees0: number;
+  fees1: number;
 };
 
 export interface CalculateEarning {
