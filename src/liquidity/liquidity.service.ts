@@ -1456,7 +1456,7 @@ export class UserLiquidityService {
       Number(token0Decimals),
     );
 
-    const { feesBetweenTicks0, feesBetweenTicks1 } =
+    const { feesPerUnitLiq0, feesPerUnitLiq1 } =
       await this.calculateFeesPerUnitLiquidity(
         reqBody.poolAddress,
         reqBody.vaultAddress,
@@ -1469,7 +1469,7 @@ export class UserLiquidityService {
     });
 
     if (userLiquidityExists) {
-      console.log('fees pr unit liq -', feesBetweenTicks0);
+      console.log('fees pr unit liq -', feesPerUnitLiq0);
       console.log(
         'fees pr unit liq old -',
         userLiquidityExists.feesPerUnitLiquidity.fees0,
@@ -1477,17 +1477,17 @@ export class UserLiquidityService {
 
       const feesEarnedTillNow: [number, number] = [
         userLiquidityExists.liquidity *
-          (feesBetweenTicks0 - userLiquidityExists.feesPerUnitLiquidity.fees0),
+          (feesPerUnitLiq0 - userLiquidityExists.feesPerUnitLiquidity.fees0),
         userLiquidityExists.liquidity *
-          (feesBetweenTicks1 - userLiquidityExists.feesPerUnitLiquidity.fees1),
+          (feesPerUnitLiq1 - userLiquidityExists.feesPerUnitLiquidity.fees1),
       ];
 
       console.log('fees eearnned -', feesEarnedTillNow);
 
       userLiquidityExists.liquidity += liquidity.toNumber();
 
-      userLiquidityExists.feesPerUnitLiquidity.fees0 = feesBetweenTicks0;
-      userLiquidityExists.feesPerUnitLiquidity.fees1 = feesBetweenTicks1;
+      userLiquidityExists.feesPerUnitLiquidity.fees0 = feesPerUnitLiq0;
+      userLiquidityExists.feesPerUnitLiquidity.fees1 = feesPerUnitLiq1;
 
       userLiquidityExists.amount0 += reqBody.amount0;
       userLiquidityExists.amount1 += reqBody.amount1;
@@ -1503,8 +1503,8 @@ export class UserLiquidityService {
     reqBody['liquidity'] = Number(liquidity.toString());
     reqBody['liquidityBlock'] = blockNumber;
     reqBody['feesPerUnitLiquidity'] = {
-      fees0: feesBetweenTicks0,
-      fees1: feesBetweenTicks1,
+      fees0: feesPerUnitLiq0,
+      fees1: feesPerUnitLiq1,
     };
 
     const userLiquidity = new this.liquidityModel(reqBody);
@@ -1520,25 +1520,28 @@ export class UserLiquidityService {
 
     const { fees0, fees1 } = User.feesPerUnitLiquidity;
 
-    const { feesBetweenTicks0, feesBetweenTicks1 } =
+    const { feesPerUnitLiq0, feesPerUnitLiq1 } =
       await this.calculateFeesPerUnitLiquidity(
         User.poolAddress,
         User.vaultAddress,
       );
 
+    console.log('old -', fees0, fees1);
+    console.log('new -', feesPerUnitLiq0, feesPerUnitLiq1);
+
     User.feeEarning = {
-      amount0: User.liquidity * (feesBetweenTicks0 - fees0),
-      amount1: User.liquidity * (feesBetweenTicks1 - fees1),
+      amount0: User.liquidity * (feesPerUnitLiq0 - fees0),
+      amount1: User.liquidity * (feesPerUnitLiq1 - fees1),
     };
 
     User.feesPerUnitLiquidity = {
-      fees0: feesBetweenTicks0,
-      fees1: feesBetweenTicks1,
+      fees0: feesPerUnitLiq0,
+      fees1: feesPerUnitLiq1,
     };
 
     User['earningBlock'] = await web3.eth.getBlockNumber();
 
-    await User.save();
+    return await User.save();
   }
 
   async calculateFeesPerUnitLiquidity(
@@ -1625,7 +1628,7 @@ export class UserLiquidityService {
      * fa = fees above
      * fb = fees below
      */
-    const feesBetweenTicks0 = new bn(token0GlobalFees)
+    const feesPerUnitLiq0 = new bn(token0GlobalFees)
       .minus(
         this.calculateFeesBelow(
           tick,
@@ -1643,7 +1646,7 @@ export class UserLiquidityService {
       )
       .div(new bn(2).pow(128));
 
-    const feesBetweenTicks1 = new bn(token1GlobalFees)
+    const feesPerUnitLiq1 = new bn(token1GlobalFees)
       .minus(
         this.calculateFeesBelow(
           tick,
@@ -1662,11 +1665,11 @@ export class UserLiquidityService {
       .div(new bn(2).pow(128));
 
     return {
-      feesBetweenTicks0: Number(
-        feesBetweenTicks0.div(new bn(10).pow(token0Decimals)).toString(),
+      feesPerUnitLiq0: Number(
+        feesPerUnitLiq0.div(new bn(10).pow(token0Decimals)).toString(),
       ),
-      feesBetweenTicks1: Number(
-        feesBetweenTicks1.div(new bn(10).pow(token1Decimals)).toString(),
+      feesPerUnitLiq1: Number(
+        feesPerUnitLiq1.div(new bn(10).pow(token1Decimals)).toString(),
       ),
     };
   }
@@ -1731,7 +1734,7 @@ export class UserLiquidityService {
   }
 
   validateFeePerUnitLiquidatePast() {
-    const feesBetweenTicks0 = new bn('908482733654628266673472628918031').minus(
+    const feesPerUnitLiq0 = new bn('908482733654628266673472628918031').minus(
       new bn(
         Number(197959) >= Number(197640)
           ? new bn('429596515394247903975740295448039')
@@ -1750,15 +1753,13 @@ export class UserLiquidityService {
     );
     // .div(new bn(2).pow(128));
 
-    console.log('fee -', feesBetweenTicks0.toString());
+    console.log('fee -', feesPerUnitLiq0.toString());
 
-    return feesBetweenTicks0.toString();
+    return feesPerUnitLiq0.toString();
   }
 
   validateFeePerUnitLiquidatePresent() {
-    const feesBetweenTicks0 = new bn(
-      '2741121578289278401784866037683222',
-    ).minus(
+    const feesPerUnitLiq0 = new bn('2741121578289278401784866037683222').minus(
       new bn(
         Number(204394) >= Number(197640)
           ? new bn('1383717631670994827413360514879678')
@@ -1777,8 +1778,8 @@ export class UserLiquidityService {
     );
     // .div(new bn(2).pow(128));
 
-    console.log('fee -', feesBetweenTicks0.toString());
+    console.log('fee -', feesPerUnitLiq0.toString());
 
-    return feesBetweenTicks0.toString();
+    return feesPerUnitLiq0.toString();
   }
 }

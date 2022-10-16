@@ -3,12 +3,12 @@ Content-Type: application/json
 
 {
   "user": "0x2c73d3d4454DB9C0Dd4d81804212982b838E100A",
-  "poolAddress": "0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8",
+  "poolAddress": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
   "vaultAddress": "0x1ae1df64bf695ea1f1a7ebdc280af712340f09a9",
-  "amount0": 100,
-  "amount1": 0.01
+  "amount0": 200,
+  "amount1": 0.02
 }
 
 ###
 
-GET http://localhost:3001/liquidity/verify
+GET http://localhost:3001/liquidity/calculateEarnings?userAddress=0x2c73d3d4454DB9C0Dd4d81804212982b838E100A&poolAddress=0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640&vaultAddress=0x1ae1df64bf695ea1f1a7ebdc280af712340f09a9
