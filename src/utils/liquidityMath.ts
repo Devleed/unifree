@@ -17,7 +17,7 @@ const getLiquidityForAmount0 = (
   amount0: bn,
 ): bn => {
   // amount0 * (sqrt(upper) * sqrt(lower)) / (sqrt(upper) - sqrt(lower))
-  const intermediate = mulDiv(sqrtRatioBX96, sqrtRatioAX96, Q96);
+  const intermediate = mulDiv(sqrtRatioBX96, sqrtRatioAX96, Q96); // √
   return mulDiv(amount0, intermediate, sqrtRatioBX96.minus(sqrtRatioAX96));
 };
 
@@ -41,6 +41,8 @@ export const getSqrtPriceX96 = (
   //   new bn(2).pow(96)
   // );
   return token0.div(token1).sqrt().multipliedBy(new bn(2).pow(96));
+
+  // √(token_0 / token_1) * 2^96
 };
 
 export const getLiquidityForAmounts = (

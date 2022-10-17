@@ -1530,10 +1530,8 @@ export class UserLiquidityService {
     console.log('old -', fees0, fees1);
     console.log('new -', feesPerUnitLiq0, feesPerUnitLiq1);
 
-    User.feeEarning = {
-      amount0: User.liquidity * (feesPerUnitLiq0 - fees0),
-      amount1: User.liquidity * (feesPerUnitLiq1 - fees1),
-    };
+    User.feeEarning.amount0 += User.liquidity * (feesPerUnitLiq0 - fees0);
+    User.feeEarning.amount1 += User.liquidity * (feesPerUnitLiq1 - fees1);
 
     User.feesPerUnitLiquidity = {
       fees0: feesPerUnitLiq0,
