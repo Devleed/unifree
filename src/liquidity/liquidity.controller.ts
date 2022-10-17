@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Post, Param, Query } from '@nestjs/common';
+import { CreateUserLiquidity } from './dto/create-user-liq.dto';
 import { UserLiquidity, CalculateEarning } from './liquidity.model';
 import { UserLiquidityService } from './liquidity.service';
 
@@ -12,7 +13,7 @@ export class UserLiquidityController {
   }
 
   @Post('/add')
-  addLiquidity(@Body() body: UserLiquidity) {
+  addLiquidity(@Body() body: CreateUserLiquidity) {
     return this.liquidityService.addLiquidity(body);
   }
 

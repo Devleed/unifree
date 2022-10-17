@@ -9,6 +9,7 @@ import {
 } from '../utils/liquidityMath';
 import axios from 'axios';
 import bn from 'bignumber.js';
+import { CreateUserLiquidity } from './dto/create-user-liq.dto';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const Web3 = require('web3');
 
@@ -1397,17 +1398,12 @@ export class UserLiquidityService {
     return this.liquidityModel.find({ user: userAddress });
   }
 
-  async addLiquidity(reqBody: UserLiquidity) {
-    const body = {
-      user: '0x2c73d3d4454DB9C0Dd4d81804212982b838E100A',
-      poolAddress: '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8',
-      vaultAddress: '0x1ae1df64bf695ea1f1a7ebdc280af712340f09a9',
-      amount0: 1000,
-      amount1: 1,
-    };
-
-    const poolContract = new web3.eth.Contract(poolABI, reqBody.poolAddress);
-    const vaultContract = new web3.eth.Contract(vaultABI, reqBody.vaultAddress);
+  async addLiquidity(_reqBody: CreateUserLiquidity) {
+    const poolContract = new web3.eth.Contract(poolABI, _reqBody.poolAddress);
+    const vaultContract = new web3.eth.Contract(
+      vaultABI,
+      _reqBody.vaultAddress,
+    );
 
     const [
       { tick },
@@ -1422,6 +1418,19 @@ export class UserLiquidityService {
       poolContract.methods.token1().call(),
       web3.eth.getBlockNumber(),
     ]);
+
+    if (token0.toLowerCase() !== _reqBody.token0.toLowerCase()) {
+      const changedAmounts = [_reqBody.amount1, _reqBody.amount0];
+      const changedTokens = [_reqBody.token1, _reqBody.token0];
+
+      _reqBody.token0 = changedTokens[0];
+      _reqBody.token1 = changedTokens[1];
+
+      _reqBody.amount0 = changedAmounts[0];
+      _reqBody.amount1 = changedAmounts[1];
+    }
+
+    return _reqBody;
 
     // get tokens data
     const token0Data = new web3.eth.Contract(erc20ABI, token0);
@@ -1450,22 +1459,22 @@ export class UserLiquidityService {
       sqrtPriceX96,
       sqrtPriceAX96,
       sqrtPriceBX96,
-      reqBody.amount0,
+      _reqBody.amount0,
       Number(token1Decimals),
-      reqBody.amount1,
+      _reqBody.amount1,
       Number(token0Decimals),
     );
 
     const { feesPerUnitLiq0, feesPerUnitLiq1 } =
       await this.calculateFeesPerUnitLiquidity(
-        reqBody.poolAddress,
-        reqBody.vaultAddress,
+        _reqBody.poolAddress,
+        _reqBody.vaultAddress,
       );
 
     const userLiquidityExists = await this.liquidityModel.findOne({
-      user: reqBody.user,
-      poolAddress: reqBody.poolAddress,
-      vaultAddress: reqBody.vaultAddress,
+      user: _reqBody.user,
+      poolAddress: _reqBody.poolAddress,
+      vaultAddress: _reqBody.vaultAddress,
     });
 
     if (userLiquidityExists) {
@@ -1489,8 +1498,8 @@ export class UserLiquidityService {
       userLiquidityExists.feesPerUnitLiquidity.fees0 = feesPerUnitLiq0;
       userLiquidityExists.feesPerUnitLiquidity.fees1 = feesPerUnitLiq1;
 
-      userLiquidityExists.amount0 += reqBody.amount0;
-      userLiquidityExists.amount1 += reqBody.amount1;
+      userLiquidityExists.amount0 += _reqBody.amount0;
+      userLiquidityExists.amount1 += _reqBody.amount1;
 
       userLiquidityExists.feeEarning.amount0 += feesEarnedTillNow[0];
       userLiquidityExists.feeEarning.amount1 += feesEarnedTillNow[1];
@@ -1500,15 +1509,15 @@ export class UserLiquidityService {
       return await userLiquidityExists.save();
     }
 
-    reqBody['liquidity'] = Number(liquidity.toString());
-    reqBody['liquidityBlock'] = blockNumber;
-    reqBody['feesPerUnitLiquidity'] = {
+    _reqBody['liquidity'] = Number(liquidity.toString());
+    _reqBody['liquidityBlock'] = blockNumber;
+    _reqBody['feesPerUnitLiquidity'] = {
       fees0: feesPerUnitLiq0,
       fees1: feesPerUnitLiq1,
     };
-    reqBody['lpTokens'] = Math.sqrt(reqBody.amount0 * reqBody.amount1);
+    _reqBody['lpTokens'] = Math.sqrt(_reqBody.amount0 * _reqBody.amount1);
 
-    const userLiquidity = new this.liquidityModel(reqBody);
+    const userLiquidity = new this.liquidityModel(_reqBody);
     return await userLiquidity.save();
   }
 
@@ -1758,27 +1767,53 @@ export class UserLiquidityService {
   }
 
   validateFeePerUnitLiquidatePresent() {
-    const feesPerUnitLiq0 = new bn('2741121578289278401784866037683222').minus(
-      new bn(
-        Number(204394) >= Number(197640)
-          ? new bn('1383717631670994827413360514879678')
-          : new bn('2741121578289278401784866037683222').minus(
-              new bn('1383717631670994827413360514879678'),
-            ),
-      ).plus(
-        new bn(
-          Number(204394) >= Number(198960)
-            ? new bn('2741121578289278401784866037683222').minus(
-                new bn('1734368711749661705640501362416568'),
-              )
-            : new bn('1734368711749661705640501362416568'),
-        ),
-      ),
+    // const feesPerUnitLiq0 = new bn('2741121578289278401784866037683222').minus(
+    //   new bn(
+    //     Number(204394) >= Number(197640)
+    //       ? new bn('1383717631670994827413360514879678')
+    //       : new bn('2741121578289278401784866037683222').minus(
+    //           new bn('1383717631670994827413360514879678'),
+    //         ),
+    //   ).plus(
+    //     new bn(
+    //       Number(204394) >= Number(198960)
+    //         ? new bn('2741121578289278401784866037683222').minus(
+    //             new bn('1734368711749661705640501362416568'),
+    //           )
+    //         : new bn('1734368711749661705640501362416568'),
+    //     ),
+    //   ),
+    // );
+    // // .div(new bn(2).pow(128));
+
+    // console.log('fee -', feesPerUnitLiq0.toString());
+
+    // return feesPerUnitLiq0.toString();
+
+    return this._checkLiq();
+  }
+
+  private _checkLiq() {
+    const sqrtPriceX96 = getSqrtPriceX96(5000, '6', '18');
+    const sqrtPriceAX96 = getSqrtPriceX96(4545, '6', '18');
+    const sqrtPriceBX96 = getSqrtPriceX96(5500, '6', '18');
+
+    console.log({
+      sqrtPriceX96,
+      sqrtPriceAX96,
+      sqrtPriceBX96,
+    });
+
+    const liquidity = getLiquidityForAmounts(
+      sqrtPriceX96,
+      sqrtPriceAX96,
+      sqrtPriceBX96,
+      1,
+      18,
+      5000,
+      6,
     );
-    // .div(new bn(2).pow(128));
 
-    console.log('fee -', feesPerUnitLiq0.toString());
-
-    return feesPerUnitLiq0.toString();
+    return liquidity;
   }
 }

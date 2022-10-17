@@ -35,8 +35,8 @@ export const getSqrtPriceX96 = (
   token0Decimal: string,
   token1Decimal: string,
 ): bn => {
-  const token0 = expandDecimals(price, Number(token0Decimal));
-  const token1 = expandDecimals(1, Number(token1Decimal));
+  const token0 = expandDecimals(price, Number(token0Decimal)); // 1000 * 10**6
+  const token1 = expandDecimals(1, Number(token1Decimal)); // 1 * 10**18
   // return mulDiv(encodePriceSqrt(token1), Q96, encodePriceSqrt(token0)).div(
   //   new bn(2).pow(96)
   // );
