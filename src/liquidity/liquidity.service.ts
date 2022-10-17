@@ -1506,6 +1506,7 @@ export class UserLiquidityService {
       fees0: feesPerUnitLiq0,
       fees1: feesPerUnitLiq1,
     };
+    reqBody['lpTokens'] = Math.sqrt(reqBody.amount0 * reqBody.amount1);
 
     const userLiquidity = new this.liquidityModel(reqBody);
     return await userLiquidity.save();

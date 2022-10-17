@@ -33,6 +33,7 @@ export interface UserLiquidity {
   feeEarning: FeeEarning;
   feesPerUnitLiquidity: FeePerEarningLiquidity;
   liquidity: number;
+  lpTokens: number;
 }
 
 type FeeEarning = {
