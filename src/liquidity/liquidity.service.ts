@@ -16,6 +16,9 @@ const Web3 = require('web3');
 const web3 = new Web3(
   'https://mainnet.infura.io/v3/6851b33c159a414894e722bfb82e916f',
 );
+const goerliWeb3 = new Web3(
+  'https://goerli.infura.io/v3/80ba3747876843469bf0c36d0a355f71',
+);
 const poolABI = [
   { inputs: [], stateMutability: 'nonpayable', type: 'constructor' },
   {
@@ -1388,6 +1391,44 @@ const erc20ABI = [
   },
 ];
 
+const uniswapMathABI = [
+  {
+    inputs: [
+      { internalType: 'uint160', name: 'sqrtRatioAX96', type: 'uint160' },
+      { internalType: 'uint160', name: 'sqrtRatioBX96', type: 'uint160' },
+      { internalType: 'uint256', name: 'amount0', type: 'uint256' },
+    ],
+    name: 'getLiquidityForAmount0',
+    outputs: [{ internalType: 'uint128', name: 'liquidity', type: 'uint128' }],
+    stateMutability: 'pure',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint160', name: 'sqrtRatioAX96', type: 'uint160' },
+      { internalType: 'uint160', name: 'sqrtRatioBX96', type: 'uint160' },
+      { internalType: 'uint256', name: 'amount1', type: 'uint256' },
+    ],
+    name: 'getLiquidityForAmount1',
+    outputs: [{ internalType: 'uint128', name: 'liquidity', type: 'uint128' }],
+    stateMutability: 'pure',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint160', name: 'sqrtRatioX96', type: 'uint160' },
+      { internalType: 'uint160', name: 'sqrtRatioAX96', type: 'uint160' },
+      { internalType: 'uint160', name: 'sqrtRatioBX96', type: 'uint160' },
+      { internalType: 'uint256', name: 'amount0', type: 'uint256' },
+      { internalType: 'uint256', name: 'amount1', type: 'uint256' },
+    ],
+    name: 'getLiquidityForAmounts',
+    outputs: [{ internalType: 'uint128', name: 'liquidity', type: 'uint128' }],
+    stateMutability: 'pure',
+    type: 'function',
+  },
+];
+
 @Injectable()
 export class UserLiquidityService {
   constructor(
@@ -1430,8 +1471,6 @@ export class UserLiquidityService {
       _reqBody.amount1 = changedAmounts[1];
     }
 
-    return _reqBody;
-
     // get tokens data
     const token0Data = new web3.eth.Contract(erc20ABI, token0);
     const token1Data = new web3.eth.Contract(erc20ABI, token1);
@@ -1443,22 +1482,26 @@ export class UserLiquidityService {
         token1Data.methods.decimals().call(),
       ]);
 
-    const sqrtPriceX96 = getSqrtPriceX96(tick, token0Decimals, token1Decimals);
+    const sqrtPriceX96 = getSqrtPriceX96(
+      this.tickToPrice(tick),
+      token0Decimals,
+      token1Decimals,
+    );
     const sqrtPriceAX96 = getSqrtPriceX96(
-      baseTickLower,
+      this.tickToPrice(baseTickLower),
       token0Decimals,
       token1Decimals,
     );
     const sqrtPriceBX96 = getSqrtPriceX96(
-      baseTickUpper,
+      this.tickToPrice(baseTickUpper),
       token0Decimals,
       token1Decimals,
     );
 
     const liquidity = getLiquidityForAmounts(
-      sqrtPriceX96,
-      sqrtPriceAX96,
-      sqrtPriceBX96,
+      sqrtPriceX96.decimalPlaces(0, 1),
+      sqrtPriceAX96.decimalPlaces(0, 1),
+      sqrtPriceBX96.decimalPlaces(0, 1),
       _reqBody.amount0,
       Number(token1Decimals),
       _reqBody.amount1,
@@ -1789,31 +1832,57 @@ export class UserLiquidityService {
     // console.log('fee -', feesPerUnitLiq0.toString());
 
     // return feesPerUnitLiq0.toString();
-
     return this._checkLiq();
   }
 
-  private _checkLiq() {
-    const sqrtPriceX96 = getSqrtPriceX96(5000, '6', '18');
-    const sqrtPriceAX96 = getSqrtPriceX96(4545, '6', '18');
-    const sqrtPriceBX96 = getSqrtPriceX96(5500, '6', '18');
+  private tickToPrice(tick: string | number) {
+    return Math.pow(1.0001, Number(tick));
+  }
 
-    console.log({
-      sqrtPriceX96,
-      sqrtPriceAX96,
-      sqrtPriceBX96,
-    });
+  async _checkLiq() {
+    const uniswapMathContract = new goerliWeb3.eth.Contract(
+      uniswapMathABI,
+      '0xB663216d69C09221AC4aA5A6e7da928Bf60e13c7',
+    );
+
+    const sqrtPriceX96 = getSqrtPriceX96(1.0001 ** 198251, '6', '18');
+    const sqrtPriceAX96 = getSqrtPriceX96(1.0001 ** 197870, '6', '18');
+    const sqrtPriceBX96 = getSqrtPriceX96(1.0001 ** 198760, '6', '18');
+
+    console.log(
+      sqrtPriceX96.decimalPlaces(0, 1).toString(),
+      sqrtPriceAX96.decimalPlaces(0, 1).toString(),
+      sqrtPriceBX96.decimalPlaces(0, 1).toString(),
+    );
+
+    const liq = await uniswapMathContract.methods
+      .getLiquidityForAmounts(
+        sqrtPriceX96.decimalPlaces(0, 1),
+        sqrtPriceAX96.decimalPlaces(0, 1),
+        sqrtPriceBX96.decimalPlaces(0, 1),
+        '32576642',
+        '9999999928841578',
+      )
+      .call();
 
     const liquidity = getLiquidityForAmounts(
       sqrtPriceX96,
       sqrtPriceAX96,
       sqrtPriceBX96,
-      1,
-      18,
-      5000,
+      32.576642,
       6,
+      0.009999999928841577,
+      18,
     );
 
-    return liquidity;
+    console.log({
+      liquidity,
+      liq,
+    });
+
+    return {
+      liq,
+      liquidity: liquidity.toString(),
+    };
   }
 }

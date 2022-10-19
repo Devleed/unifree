@@ -23,11 +23,8 @@ export class UserLiquidityController {
   }
 
   @Get('/validate')
-  validateFeesPast() {
-    return {
-      past: this.liquidityService.validateFeePerUnitLiquidatePast(),
-      present: this.liquidityService.validateFeePerUnitLiquidatePresent(),
-    };
+  async validateFeesPast() {
+    return await this.liquidityService._checkLiq();
   }
 
   // @Get('/validatePresent')

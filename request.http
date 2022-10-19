@@ -5,8 +5,8 @@ Content-Type: application/json
   "user": "0x2c73d3d4454DB9C0Dd4d81804212982b838E100A",
   "poolAddress": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
   "vaultAddress": "0x1ae1df64bf695ea1f1a7ebdc280af712340f09a9",
-  "amount0": 0.02,
-  "amount1": 200,
+  "amount0": 1000,
+  "amount1": 1,
   "token0": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
   "token1": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 }
