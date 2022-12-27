@@ -5,7 +5,6 @@ export const LiquiditySchema = new mongoose.Schema({
   amount0: Number,
   amount1: Number,
   poolAddress: String,
-  vaultAddress: String,
   liquidityBlock: Number,
   earningBlock: Number,
   lpTokens: Number,
@@ -18,6 +17,10 @@ export const LiquiditySchema = new mongoose.Schema({
     fees1: { type: Number, default: 0 },
   },
   liquidity: Number,
+  tickLower: Number,
+  tickUpper: Number,
+  feeTier: Number,
+  timeAdded: { type: Number, default: Date.now() },
 });
 
 export interface UserLiquidity {
@@ -27,13 +30,16 @@ export interface UserLiquidity {
   amount0Real: number;
   amount1Real: number;
   poolAddress: string;
-  vaultAddress: string;
   liquidityBlock: number;
   earningBlock: number;
   feeEarning: FeeEarning;
   feesPerUnitLiquidity: FeePerEarningLiquidity;
   liquidity: number;
   lpTokens: number;
+  tickLower: number;
+  tickUpper: number;
+  feeTier: number;
+  timeAdded: number;
 }
 
 type FeeEarning = {
@@ -49,5 +55,4 @@ type FeePerEarningLiquidity = {
 export interface CalculateEarning {
   userAddress: string;
   poolAddress: string;
-  vaultAddress: string;
 }

@@ -4,7 +4,8 @@ Content-Type: application/json
 {
   "user": "0x2c73d3d4454DB9C0Dd4d81804212982b838E100A",
   "poolAddress": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
-  "vaultAddress": "0x1ae1df64bf695ea1f1a7ebdc280af712340f09a9",
+  "tickLower": 85171,
+  "tickUpper": 91230,
   "amount0": 1000,
   "amount1": 1,
   "token0": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
@@ -13,8 +14,8 @@ Content-Type: application/json
 
 ###
 
-GET http://localhost:3001/liquidity/calculateEarnings?userAddress=0x2c73d3d4454DB9C0Dd4d81804212982b838E100A&poolAddress=0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640&vaultAddress=0x1ae1df64bf695ea1f1a7ebdc280af712340f09a9
+GET http://localhost:3005/liquidity/calculateEarnings?userAddress=0x00Bbf132C91BF979aBc5f87bE0F21A073b8A4F4C&poolAddress=0x5777d92f208679DB4b9778590Fa3CAB3aC9e2168
 
 ### 
 
-GET http://localhost:3001/liquidity/validate
+GET http://localhost:3005/liquidity/getUserLiquidity/0x00Bbf132C91BF979aBc5f87bE0F21A073b8A4F4C

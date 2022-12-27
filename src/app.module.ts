@@ -8,9 +8,9 @@ import { LiquidityModule } from './liquidity/liquidity.module';
 @Module({
   imports: [
     MongooseModule.forRoot(
-      'mongodb+srv://devleed:unipilotDev123@paperliquidity.ewqtfci.mongodb.net/?retryWrites=true&w=majority',
+      'mongodb+srv://devleed:unipaperKarachi12@maincluster.7zkgows.mongodb.net/?retryWrites=true&w=majority',
       {
-        dbName: 'paper-liquidity',
+        dbName: 'Unipaper',
       },
     ),
     LiquidityModule,
