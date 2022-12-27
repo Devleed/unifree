@@ -22,6 +22,11 @@ export class UserLiquidityController {
     return this.liquidityService.calculateEarning(query);
   }
 
+  @Get('/remove')
+  removeLiquidity(@Query() query: CalculateEarning) {
+    return this.liquidityService.removeLiquidity(query);
+  }
+
   @Get('/validate')
   async validateFeesPast() {
     return await this.liquidityService._checkLiq();

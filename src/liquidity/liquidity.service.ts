@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { throwError } from 'src/utils';
@@ -1103,32 +1103,55 @@ export class UserLiquidityService {
     return await userLiquidity.save();
   }
 
+  async removeLiquidity({ userAddress, poolAddress }) {
+    try {
+      const userLiquidity = await this.liquidityModel.findOne({
+        user: userAddress,
+        poolAddress,
+      });
+
+      if (!userLiquidity) throw new NotFoundException('No liquidity found');
+
+      userLiquidity.liquidity = 0;
+
+      return await userLiquidity.save();
+    } catch (error) {
+      console.log('error removing liq -', error);
+
+      throw error;
+    }
+  }
+
   async calculateEarning({ userAddress, poolAddress }) {
     const User = await this.liquidityModel.findOne({
       User: userAddress,
       poolAddress,
     });
 
-    const { fees0, fees1 } = User.feesPerUnitLiquidity;
+    if (User.liquidity > 0) {
+      const { fees0, fees1 } = User.feesPerUnitLiquidity;
 
-    const { feesPerUnitLiq0, feesPerUnitLiq1 } =
-      await this.calculateFeesPerUnitLiquidity(
-        User.poolAddress,
-        User.tickLower,
-        User.tickUpper,
-      );
+      const { feesPerUnitLiq0, feesPerUnitLiq1 } =
+        await this.calculateFeesPerUnitLiquidity(
+          User.poolAddress,
+          User.tickLower,
+          User.tickUpper,
+        );
 
-    User.feeEarning.amount0 += User.liquidity * (feesPerUnitLiq0 - fees0);
-    User.feeEarning.amount1 += User.liquidity * (feesPerUnitLiq1 - fees1);
+      User.feeEarning.amount0 += User.liquidity * (feesPerUnitLiq0 - fees0);
+      User.feeEarning.amount1 += User.liquidity * (feesPerUnitLiq1 - fees1);
 
-    User.feesPerUnitLiquidity = {
-      fees0: feesPerUnitLiq0,
-      fees1: feesPerUnitLiq1,
-    };
+      User.feesPerUnitLiquidity = {
+        fees0: feesPerUnitLiq0,
+        fees1: feesPerUnitLiq1,
+      };
 
-    User['earningBlock'] = await web3.eth.getBlockNumber();
+      User['earningBlock'] = await web3.eth.getBlockNumber();
 
-    return await User.save();
+      return await User.save();
+    }
+
+    return User;
   }
 
   async calculateFeesPerUnitLiquidity(
