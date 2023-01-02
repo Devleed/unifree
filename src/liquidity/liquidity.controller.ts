@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Param, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Param,
+  Query,
+  Patch,
+  Delete,
+} from '@nestjs/common';
 import { CreateUserLiquidity } from './dto/create-user-liq.dto';
 import { UserLiquidity, CalculateEarning } from './liquidity.model';
 import { UserLiquidityService } from './liquidity.service';
@@ -22,7 +31,7 @@ export class UserLiquidityController {
     return this.liquidityService.calculateEarning(query);
   }
 
-  @Get('/remove')
+  @Delete('/remove')
   removeLiquidity(@Query() query: CalculateEarning) {
     return this.liquidityService.removeLiquidity(query);
   }

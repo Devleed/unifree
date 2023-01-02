@@ -18,4 +18,4 @@ GET http://localhost:3005/liquidity/calculateEarnings?userAddress=0x00Bbf132C91B
 
 ### 
 
-GET http://localhost:3005/liquidity/getUserLiquidity/0x00Bbf132C91BF979aBc5f87bE0F21A073b8A4F4C
+GET https://paper-liquidity-backend.herokuapp.com/liquidity/getUserLiquidity/0x00Bbf132C91BF979aBc5f87bE0F21A073b8A4F4C
